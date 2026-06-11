@@ -34,11 +34,8 @@ COPY --from=builder /app/dist ./dist
 # Copiar configuración por defecto (si existe) o crearla al arrancar
 COPY config.json ./config.json
 
-# Crear carpetas de datos persistentes para volumenes
+# Crear carpetas de datos persistentes
 RUN mkdir -p auth_info_baileys cache logs
-
-# Exponer volúmenes para persistencia
-VOLUME ["/app/auth_info_baileys", "/app/cache", "/app/logs"]
 
 # Comando para iniciar la aplicación
 CMD ["node", "dist/index.js"]
