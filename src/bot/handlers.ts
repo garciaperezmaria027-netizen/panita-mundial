@@ -87,7 +87,12 @@ export async function handleIncomingMessage(sock: WASocket, m: proto.IWebMessage
       const senderPhone = senderJid.split('@')[0].split(':')[0];
       const isAdmin = senderPhone === adminPhone;
 
-      if (allowedChats.includes(chatJid) || isAdmin) {
+      // Comparar por número (sin sufijo @lid / @s.whatsapp.net / @s.whatsapp.net)
+      // para manejar el caso en que el chat se guardó con un sufijo diferente al que llega
+      const chatPhone = chatJid.split('@')[0].split(':')[0];
+      const isAllowed = allowedChats.some(c => c.split('@')[0].split(':')[0] === chatPhone);
+
+      if (isAllowed || isAdmin) {
         await sock.sendPresenceUpdate('composing', chatJid);
         const reply = await geminiService.getResponse(chatJid, text);
         await sendMessage(sock, chatJid, reply, m);
