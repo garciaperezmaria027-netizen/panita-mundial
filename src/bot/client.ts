@@ -62,11 +62,15 @@ export class WhatsAppClient {
       const { version, isLatest } = await fetchLatestBaileysVersion();
       logger.info(`📋 [WhatsApp] Usando versión de Baileys: v${version.join('.')}, última disponible: ${isLatest}`);
 
+      // Determinar si usar pairing code o QR
+      const pairingPhone = process.env.PAIRING_PHONE_NUMBER?.replace(/[^0-9]/g, '');
+      const usePairing = !!pairingPhone && !state.creds.registered;
+
       // Crear socket de conexión
       this.sock = makeWASocket({
         version,
         auth: state,
-        printQRInTerminal: false, // Lo manejamos nosotros manualmente para mejor control
+        printQRInTerminal: !usePairing, // Solo imprime QR si no usamos pairing code
         defaultQueryTimeoutMs: 60000,
         keepAliveIntervalMs: 30000
       });
@@ -74,11 +78,42 @@ export class WhatsAppClient {
       // Guardar credenciales automáticamente ante cambios
       this.sock.ev.on('creds.update', saveCreds);
 
+      // Si se usa pairing code, solicitarlo cuando el socket esté listo
+      if (usePairing) {
+        logger.info(`📱 [WhatsApp] Modo Pairing Code activado para el número: +${pairingPhone}`);
+        // Esperar un momento para que el socket se estabilice antes de pedir el código
+        setTimeout(async () => {
+          try {
+            if (this.sock && !state.creds.registered) {
+              const code = await this.sock.requestPairingCode(pairingPhone!);
+              const formattedCode = code.match(/.{1,4}/g)?.join('-') ?? code;
+              logger.info('');
+              logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+              logger.info('🔑  CÓDIGO DE VINCULACIÓN WHATSAPP');
+              logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+              logger.info(`➡️   CÓDIGO: ${formattedCode}`);
+              logger.info('');
+              logger.info('📲 Pasos para vincular:');
+              logger.info('   1. Abre WhatsApp Business en tu teléfono');
+              logger.info('   2. Ve a ⋮ Menú → Dispositivos vinculados');
+              logger.info('   3. Toca "Vincular con número de teléfono"');
+              logger.info(`   4. Ingresa el código: ${formattedCode}`);
+              logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+              logger.info('');
+            }
+          } catch (err) {
+            logger.error('❌ [WhatsApp] Error al solicitar pairing code:', err);
+            logger.info('🔄 [WhatsApp] Intentando con QR como fallback...');
+          }
+        }, 3000);
+      }
+
       // Escuchar cambios en la conexión (QR, Conectado, Desconectado)
       this.sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
-        if (qr) {
+        // Mostrar QR solo si no estamos en modo pairing code
+        if (qr && !usePairing) {
           logger.info('🔑 [WhatsApp] Nuevo código QR recibido. Escanéalo con tu aplicación de WhatsApp:');
           qrcode.generate(qr, { small: true });
         }
@@ -106,7 +141,7 @@ export class WhatsAppClient {
           logger.warn(`❌ [WhatsApp] Conexión cerrada. Código de error: ${statusCode}. Razón: ${lastDisconnect?.error}`);
 
           if (statusCode === DisconnectReason.loggedOut) {
-            logger.error('❌ [WhatsApp] Sesión desvinculada (Logged Out). Se requiere escanear un nuevo QR.');
+            logger.error('❌ [WhatsApp] Sesión desvinculada (Logged Out). Se requiere nueva vinculación.');
             this.clearAuthSession();
           }
 
@@ -119,7 +154,7 @@ export class WhatsAppClient {
               this.connect();
             }, delayTime);
           } else {
-            logger.info('🔄 [WhatsApp] Reiniciando bot para generar nuevo QR...');
+            logger.info('🔄 [WhatsApp] Reiniciando bot para generar nueva vinculación...');
             this.isReconnecting = false;
             this.connect();
           }
