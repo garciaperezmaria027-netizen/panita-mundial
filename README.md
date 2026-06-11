@@ -1,119 +1,157 @@
-# 🏆 MundialBot WhatsApp 2026
+# 🏆 Panita Mundial — Bot de WhatsApp para el FIFA World Cup 2026
 
-**MundialBot** es un bot de WhatsApp modular y de ultra-bajo costo operativo diseñado específicamente para el Mundial FIFA 2026. Permite programar un resumen diario automático de partidos para chats privados y grupales, y cuenta con un Asistente de IA (Gemini 2.5 Flash) que responde consultas futbolísticas en tiempo real con datos de **API-Football** mediante llamadas a funciones (Tool Calling).
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white"/>
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white"/>
+  <img src="https://img.shields.io/badge/WhatsApp-Baileys-25D366?style=for-the-badge&logo=whatsapp&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Railway-Deployed-0B0D0E?style=for-the-badge&logo=railway&logoColor=white"/>
+</p>
 
-## 🚀 Características Clave
-* **Resumen Diario Programado:** Despacha el itinerario del día a la hora que definas (con soporte de zona horaria de Colombia).
-* **Asistente Inteligente (Gemini 2.5 Flash):** Responde preguntas de posiciones, resultados, goleadores, alineaciones y jugadores sin inventar datos (cero alucinaciones).
-* **Caché Inteligente Local:** Guarda las llamadas de API-Football en archivos JSON locales (con TTL de 1 min a 12 horas) para no agotar el plan gratuito de 100 peticiones diarias.
-* **Comandos Administrativos:** Configura quién recibe el resumen y a qué hora en caliente, desde WhatsApp.
-* **Persistencia Robusta:** Reconexión automática exponencial y persistencia de sesión sin bases de datos SQL/NoSQL pesadas.
-* **Ligero y Listo para Docker:** Imagen Docker optimizada (Alpine) sin dependencias gráficas/Chromium (Baileys se conecta nativamente).
+> **Panita Mundial** es un asistente de WhatsApp temático para el Mundial FIFA 2026. Responde preguntas sobre partidos, tablas de posiciones, goleadores, estadísticas y cualquier tema futbolístico usando IA con acceso a datos reales. También envía un resumen diario automático de partidos a grupos y chats suscritos.
 
 ---
 
-## 🛠️ Estructura del Proyecto
+## ✨ Características
+
+| Categoría | Detalle |
+|---|---|
+| 🤖 **IA Conversacional** | Gemini 2.5 Flash como motor principal con fallback automático a OpenRouter (Qwen, DeepSeek, etc.) |
+| ⚽ **Datos en Tiempo Real** | Tool Calling contra API-Football con soporte para datos gratuitos del Mundial 2026 |
+| 💬 **Menciones Inteligentes** | Detecta `@bot` por JID de teléfono **y** por LID (sistema de identificadores anónimos de WhatsApp moderno) |
+| 📅 **Resumen Diario** | Cron programable (hora ajustable en caliente) con zona horaria de Colombia |
+| 🧠 **Historial por Chat** | Contexto de conversación independiente por JID (hasta 5 turnos de memoria) |
+| 💾 **Caché Inteligente** | Archivos JSON locales con TTL dinámico para conservar el plan gratuito de API-Football |
+| 🔧 **Comandos Admin** | Gestión completa desde WhatsApp sin necesidad de reiniciar el bot |
+| 🔄 **Reconexión Automática** | Re-establece la sesión de WhatsApp ante caídas de red o reinicios |
+| 🐳 **Listo para Docker / Railway** | Imagen Alpine optimizada, sin Chromium ni drivers de navegador |
+
+---
+
+## 🏗️ Arquitectura del Proyecto
+
 ```
-MundialBot/
+panita-mundial/
 ├── src/
-│   ├── index.ts                 # Punto de entrada principal
+│   ├── index.ts                  # Punto de entrada — arranca cliente y scheduler
 │   ├── bot/
-│   │   ├── client.ts            # Conexión Baileys WhatsApp y reconexión
-│   │   └── handlers.ts          # Filtro de mensajes y flujo IA/Admin
+│   │   ├── client.ts             # Conexión Baileys, gestión QR/Pairing Code y reconexión
+│   │   └── handlers.ts           # Filtro de mensajes: menciones (JID + LID), admin, grupos, privados
 │   ├── commands/
-│   │   └── admin.ts             # Procesador de comandos de administrador (/)
+│   │   └── admin.ts              # Todos los comandos /slash del administrador
 │   ├── config/
-│   │   └── manager.ts           # Gestor de config.json y variables .env
-│   ├── services/
-│   │   ├── sports.ts            # Lógica de negocio deportivo y caché
-│   │   └── cache.ts             # Motor de caché en archivos JSON
-│   ├── providers/
-│   │   └── api-football.ts      # Cliente HTTP para API-Football y reintentos
+│   │   └── manager.ts            # Lee .env y config.json; expone getters tipados
 │   ├── ai/
-│   │   ├── gemini.ts            # Configuración de Gemini y Tool Calling
-│   │   └── system-prompt.ts     # Directrices del comportamiento de la IA
+│   │   ├── gemini.ts             # Orquestador de IA: Gemini SDK directo + fallback OpenRouter
+│   │   └── system-prompt.ts      # Personalidad y directrices del asistente "Panita Mundial"
 │   ├── tools/
-│   │   └── definitions.ts       # Definición de herramientas para Gemini
+│   │   └── definitions.ts        # Herramientas de Tool Calling (partidos, tablas, goleadores…)
+│   ├── services/
+│   │   ├── sports.ts             # Lógica de negocio deportivo y caché
+│   │   └── cache.ts              # Motor de caché basado en archivos JSON con TTL
+│   ├── providers/
+│   │   └── api-football.ts       # Cliente HTTP para API-Football con reintentos
 │   ├── scheduler/
-│   │   └── cron.ts              # Scheduler de tareas con node-cron
+│   │   └── cron.ts               # node-cron: resumen diario automático
 │   ├── utils/
-│   │   ├── logger.ts            # Logger en consola de colores y archivo
-│   │   └── formatter.ts         # Formateador de texto y plantillas WhatsApp
+│   │   ├── logger.ts             # Logger en colores para consola y archivo
+│   │   └── formatter.ts          # Plantillas y formateadores de texto para WhatsApp
 │   └── types/
-│       ├── config.ts            # Tipos de configuración del bot
-│       └── sports.ts            # Interfaces de la API deportiva
-├── config.json                  # Archivo de configuración persistente
-├── .env.example                 # Plantilla de variables de entorno
-├── Dockerfile                   # Dockerfile multi-etapa
-├── docker-compose.yml           # Orquestación Docker local/producción
-├── package.json                 # Dependencias
-└── tsconfig.json                # Configuración de compilación TS
+│       ├── config.ts             # Tipos de configuración del bot
+│       └── sports.ts             # Interfaces de la API deportiva
+├── config.json                   # Configuración persistente (grupos, chats, hora del cron)
+├── .env.example                  # Plantilla de variables de entorno
+├── Dockerfile                    # Build multi-etapa con Node 18 Alpine
+├── docker-compose.yml            # Orquestación local con volumen persistente
+├── fly.toml                      # Configuración para despliegue en Fly.io (alternativo)
+└── tsconfig.json
 ```
 
 ---
 
-## ⚙️ Variables de Entorno (.env)
-Crea un archivo `.env` en la raíz del proyecto basándote en `.env.example`:
+## ⚙️ Variables de Entorno
+
+Crea un archivo `.env` en la raíz basándote en `.env.example`:
 
 ```env
-# API Key de Gemini (Google AI Studio - Gratis o pago por uso extremadamente económico)
+# ── Inteligencia Artificial ──────────────────────────────────────────
+# Google AI Studio: https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=tu_api_key_de_gemini
 
-# API-Football (api-sports.io - Plan Free de 100 llamadas/día suficiente debido a la caché)
+# OpenRouter (fallback automático si Gemini falla o su cuota se agota)
+# https://openrouter.ai/keys
+OPENROUTER_API_KEY=tu_api_key_de_openrouter
+# Lista de modelos en orden de prioridad (separados por coma)
+OPENROUTER_MODELS=google/gemini-2.5-flash:free,qwen/qwen3-coder:free,deepseek/deepseek-chat:free
+
+# ── Datos Deportivos ─────────────────────────────────────────────────
+# api-sports.io (plan gratuito: 100 peticiones/día)
 API_FOOTBALL_KEY=tu_api_key_de_api_football
 API_FOOTBALL_URL=https://v3.football.api-sports.io
-API_FOOTBALL_LEAGUE=1
+API_FOOTBALL_LEAGUE=1        # 1 = FIFA World Cup
 API_FOOTBALL_SEASON=2026
 
-# Teléfono del administrador (Sin '+', espacios o símbolos. Ej: 573001234567)
+# Proveedor activo: 'free-2026' (datos públicos gratis) o 'api-football'
+SPORTS_PROVIDER=free-2026
+
+# ── Administrador ────────────────────────────────────────────────────
+# Número con código de país, sin '+', sin espacios (ej: 573001234567)
 ADMIN_PHONE=573000000000
 ```
+
+### ¿Cuándo usar cada proveedor deportivo?
+
+| `SPORTS_PROVIDER` | Cuándo usarlo |
+|---|---|
+| `free-2026` | Datos públicos del Mundial 2026, sin costo ni clave adicional |
+| `api-football` | Mayor detalle (alineaciones, árbitros, estadísticas avanzadas) usando tu clave de api-sports.io |
 
 ---
 
 ## 💻 Ejecución Local
 
-### Prerrequisitos
-* Node.js v18 o superior.
-* npm (o yarn/pnpm).
+### Requisitos
 
-### Paso 1: Instalación de dependencias
-En Windows (si la política de ejecución bloquea scripts de PowerShell), ejecuta:
+- Node.js v18 o superior
+- npm
+
+### 1. Instalar dependencias
+
 ```bash
+# Windows (si PowerShell bloquea scripts):
 npm.cmd install
-```
-En Linux / macOS:
-```bash
+
+# Linux / macOS:
 npm install
 ```
 
-### Paso 2: Configurar Credenciales
-Duplica el archivo `.env.example` como `.env` e introduce tus credenciales correspondientes.
+### 2. Crear el archivo `.env`
 
-### Paso 3: Ejecutar Pruebas Clínicas (Recomendado)
-Antes de vincular WhatsApp, puedes validar la API deportiva y la IA ejecutando:
 ```bash
-# Probar conexión con API-Football, formateo y caché
-npm run test-sports
-
-# Probar que Gemini procesa preguntas y llama a las herramientas de fútbol correctamente
-npm run test-ai
+cp .env.example .env
+# Editar .env con tus claves reales
 ```
 
-### Paso 4: Iniciar el Bot en Desarrollo
+### 3. Iniciar el bot en modo desarrollo
+
 ```bash
 npm run dev
 ```
-Escanea el código QR que se imprimirá en la consola con la aplicación de WhatsApp de tu teléfono (en Dispositivos Vinculados).
+
+Al arrancar por primera vez, verás un **código QR** en la consola. Escanéalo desde WhatsApp → **Dispositivos vinculados → Vincular dispositivo**.
+
+> **Tip**: Si el servidor no tiene pantalla, usa la opción de Pairing Code configurando `PAIRING_PHONE_NUMBER` en el `.env` con el número del bot.
 
 ---
 
-## 🐳 Despliegue con Docker (Recomendado)
-
-El despliegue con Docker encapsula todo y garantiza que el bot se ejecute sin preocuparte por las dependencias de Node locales.
+## 🐳 Despliegue con Docker (Recomendado para VPS)
 
 ```bash
-# Clonar y configurar tu .env
+# Clonar el repositorio y configurar .env
+git clone https://github.com/santiroldanm/panita-mundial.git
+cd panita-mundial
+cp .env.example .env && nano .env
+
 # Construir e iniciar en segundo plano
 docker compose up -d --build
 
@@ -121,61 +159,145 @@ docker compose up -d --build
 docker compose logs -f mundialbot
 ```
 
----
-
-## ☁️ Guía de Despliegue en Producción 24/7
-
-WhatsApp requiere una conexión de socket TCP permanente. Por ende, **no uses plataformas Serverless ni planes gratuitos que "duerman" contenedores** (como los planes gratis de Render o Fly.io).
-
-### Opción A: VPS Económico (Hostinger / Hetzner / DigitalOcean) - Recomendado
-1. Renta un VPS Linux Ubuntu (costo de $3 a $4 USD/mes).
-2. Instala Docker y Docker Compose:
-   ```bash
-   sudo apt update && sudo apt install -y docker.io docker-compose
-   ```
-3. Clona tu repositorio en el servidor.
-4. Crea el archivo `.env` con las variables de producción.
-5. Inicia el bot:
-   ```bash
-   docker-compose up -d --build
-   ```
-6. Abre los logs para ver el código QR y vincular tu bot:
-   ```bash
-   docker-compose logs -f
-   ```
-
-### Opción B: Railway (Plan Developer)
-1. Crea un nuevo proyecto en [Railway](https://railway.app/).
-2. Agrega un servicio **GitHub** apuntando a tu repositorio.
-3. En la pestaña **Variables**, añade todas las del archivo `.env`.
-4. En **Settings**, añade un **Volume** persistente montado en `/app/auth_info_baileys` para que la sesión de WhatsApp no se pierda al reiniciar el contenedor.
-5. Railway compilará automáticamente el proyecto usando el `Dockerfile` y arrancará el bot.
-6. Ve a los logs del servicio en Railway para escanear el código QR impreso en la consola.
+El `docker-compose.yml` incluye un volumen persistente para `auth_info_baileys`, por lo que **la sesión de WhatsApp sobrevive a los reinicios del contenedor**.
 
 ---
 
-## 🤖 Comandos Administrativos (Solo Admin)
-Envía estos comandos desde el número configurado en `ADMIN_PHONE` en cualquier chat con el bot:
+## ☁️ Despliegue en Producción 24/7
 
-| Comando | Acción |
+WhatsApp requiere una **conexión TCP permanente**. No uses plataformas serverless ni planes gratuitos que apaguen los contenedores por inactividad.
+
+### Opción A — Railway (Recomendado ✅)
+
+1. Crea un proyecto en [Railway](https://railway.app/) y conecta este repositorio de GitHub.
+2. En la pestaña **Variables**, copia todas las variables de `.env.example` con tus valores reales.
+3. En **Settings → Volumes**, crea un volumen persistente montado en `/app/auth_info_baileys`.
+4. Railway compilará el `Dockerfile` automáticamente en cada push a `master`.
+5. Revisa los logs del servicio para escanear el QR la primera vez.
+
+### Opción B — VPS (Hostinger / Hetzner / DigitalOcean)
+
+```bash
+sudo apt update && sudo apt install -y docker.io docker-compose
+git clone https://github.com/santiroldanm/panita-mundial.git
+cd panita-mundial && cp .env.example .env && nano .env
+docker-compose up -d --build
+docker-compose logs -f  # Escanear QR
+```
+
+---
+
+## 🤖 Cómo Interactuar con el Bot
+
+### En Grupos
+
+Menciona al bot con `@` (mención nativa de WhatsApp):
+
+```
+@Panita Mundial ¿quién lidera el grupo A del Mundial?
+@Panita Mundial dame los resultados de hoy
+@Panita Mundial quién es el máximo goleador?
+```
+
+> El bot detecta menciones tanto por número de teléfono como por LID (Linked ID), el sistema de identificadores anónimos que WhatsApp usa en grupos modernos. **No importa el nombre con que tengas guardado el contacto.**
+
+### En Chats Privados
+
+Escribe directamente (el chat debe estar autorizado por el admin o ser el propio admin):
+
+```
+¿A qué hora juega Colombia hoy?
+Dame la tabla de posiciones del grupo B
+¿Cuántos goles lleva Messi?
+```
+
+---
+
+## 🛡️ Comandos Administrativos
+
+Solo el número configurado en `ADMIN_PHONE` puede ejecutarlos, desde cualquier chat con el bot:
+
+| Comando | Descripción |
 |---|---|
-| `/agregargrupo` | Habilita el grupo actual para que reciba el resumen diario e interactúe con la IA. |
-| `/eliminargrupo` | Remueve el grupo actual. |
-| `/agregarchat [teléfono]` | Habilita un chat privado (especificando teléfono con código de país, ej: `573001234567`) o el actual. |
-| `/eliminarchat [teléfono]` | Remueve el chat de la lista de envíos. |
-| `/listargrupos` | Lista los JID de todos los grupos autorizados. |
-| `/listarchats` | Lista todos los números de chats privados registrados. |
-| `/cambiarhora [HH:MM]` | Actualiza la hora del resumen y reinicia el cron en caliente (ej: `/cambiarhora 07:30`). |
-| `/resumen` | Fuerza el despacho inmediato del resumen de partidos a todos los suscritos (útil para pruebas). |
-| `/limpiarcache` | Limpia los archivos de caché deportivos para obtener información instantánea desde la API. |
-| `/estado` | Muestra estado de la conexión, consumo de memoria del proceso, estadísticas y tiempo activo. |
+| `/agregargrupo` | Registra el grupo actual para recibir el resumen diario y activar la IA |
+| `/eliminargrupo` | Elimina el grupo actual de la lista de suscritos |
+| `/agregarchat [teléfono]` | Registra un chat privado (ej: `/agregarchat 573001234567`) |
+| `/eliminarchat [teléfono]` | Elimina un chat privado de la lista |
+| `/listargrupos` | Muestra todos los grupos registrados con sus JIDs |
+| `/listarchats` | Muestra todos los chats privados registrados |
+| `/cambiarhora HH:MM` | Actualiza la hora del resumen diario en caliente (ej: `/cambiarhora 07:30`) |
+| `/resumen` | Fuerza el envío inmediato del resumen a todos los suscritos |
+| `/limpiarcache` | Borra la caché local para obtener datos frescos de la API |
+| `/estado` | Muestra uptime, memoria, suscripciones y configuración activa |
 
 ---
 
-## 🛡️ Políticas de Caché
-Para evitar bloqueos por consumo de la API de Deportes (Límite de 100/día gratis), se implementan estas reglas de tiempo de vida (TTL):
-* **Tabla de Posiciones:** Expiración cada 1 hora.
-* **Goleadores y Asistencias:** Expiración cada 4 horas.
-* **Información de Equipos:** Expiración cada 6 horas.
-* **Partidos del Día:** Expiración cada 30 minutos (se reduce a 2 minutos automáticamente si hay un partido jugándose en vivo).
-* **Detalle de Incidencias/Alineación:** Expiración cada 1 minuto si está en juego, o 12 horas si el partido ya finalizó.
+## ⚡ Cómo Funciona la IA
+
+```
+Usuario menciona @bot en grupo
+        │
+        ▼
+   handlers.ts detecta mención
+   (por JID de teléfono O por LID)
+        │
+        ▼
+   Limpia la mención del texto
+        │
+        ▼
+   gemini.ts clasifica la consulta
+   ¿Es sobre fútbol?
+   ├── Sí → carga herramientas de Tool Calling (partidos, tablas, goleadores…)
+   └── No → carga Google Search (Gemini) o responde con conocimiento general
+        │
+        ▼
+   Intenta con Gemini SDK directo
+   ├── Éxito → responde al usuario
+   └── Error (cuota / timeout) → fallback a OpenRouter
+           │
+           └── Prueba cada modelo en OPENROUTER_MODELS en orden
+                   ├── Éxito → responde al usuario
+                   └── Todos fallan → mensaje de error amigable
+```
+
+---
+
+## 💾 Políticas de Caché
+
+Para conservar las 100 peticiones diarias gratuitas de API-Football:
+
+| Tipo de datos | TTL normal | TTL en vivo |
+|---|---|---|
+| Partidos del día | 30 minutos | 2 minutos |
+| Incidencias / alineaciones | 12 horas | 1 minuto |
+| Tabla de posiciones | 1 hora | — |
+| Goleadores y asistidores | 4 horas | — |
+| Información de equipos | 6 horas | — |
+
+---
+
+## 🛠️ Scripts Disponibles
+
+```bash
+npm run dev          # Ejecuta en modo desarrollo con ts-node
+npm run build        # Compila TypeScript a JavaScript en /dist
+npm run start        # Ejecuta la versión compilada (producción)
+npm run test-sports  # Prueba la conexión con API-Football y el formateo
+npm run test-ai      # Prueba el flujo de Gemini y Tool Calling
+```
+
+---
+
+## 📋 Requisitos de las APIs
+
+| API | Plan mínimo | Límite gratuito | Link |
+|---|---|---|---|
+| Google Gemini | Free | 1,500 req/día, 15 RPM | [aistudio.google.com](https://aistudio.google.com) |
+| OpenRouter | Free | Varía por modelo | [openrouter.ai](https://openrouter.ai) |
+| API-Football | Free | 100 req/día | [api-sports.io](https://api-sports.io) |
+
+---
+
+## 📄 Licencia
+
+MIT © 2026 — Hecho con ⚽ para el Mundial
