@@ -44,16 +44,19 @@ export async function handleIncomingMessage(sock: WASocket, m: proto.IWebMessage
     // 2. Manejo en Grupos
     if (isGroup) {
       const allowedGroups = configManager.getGroups();
-      
-      // Ignorar si el grupo no está autorizado
-      if (!allowedGroups.includes(chatJid)) {
-        return;
-      }
+      const isRegisteredGroup = allowedGroups.includes(chatJid);
 
-      // Verificar si el bot fue mencionado
-      const isMentioned = checkIfMentioned(m.message, myPhone, text);
+      // Verificar si fue mencionado por contacto nativo (@Contacto de WhatsApp)
+      const isNativeMention = checkIfNativeMention(m.message, myPhone);
+      // Verificar si fue mencionado por texto (@panita, @bot, etc.)
+      const isTextMention = checkIfTextMention(text, myPhone);
+
+      // En grupos NO registrados: solo responder a menciones nativas de contacto
+      // En grupos registrados: responder a cualquier tipo de mención
+      const isMentioned = isNativeMention || (isRegisteredGroup && isTextMention);
+
       if (!isMentioned) {
-        return; // Ignorar mensajes normales para evitar spam
+        return; // Ignorar mensajes sin mención
       }
 
       // Limpiar las menciones del texto para enviarlo a Gemini
@@ -110,28 +113,27 @@ function extractMessageText(message: proto.IMessage): string {
 }
 
 /**
- * Verifica si el bot fue mencionado de forma explícita
+ * Verifica si el bot fue mencionado de forma nativa por WhatsApp
+ * (es decir, su JID aparece en la lista mentionedJid del contextInfo).
+ * Esto funciona sin importar cuál sea el nombre de contacto guardado.
  */
-function checkIfMentioned(message: proto.IMessage, myPhone: string, text: string): boolean {
-  // 1. Mención formal en contextInfo de WhatsApp
-  const mentionedJids = message.extendedTextMessage?.contextInfo?.mentionedJid || [];
+function checkIfNativeMention(message: proto.IMessage, myPhone: string): boolean {
+  const mentionedJids =
+    message.extendedTextMessage?.contextInfo?.mentionedJid ||
+    message.imageMessage?.contextInfo?.mentionedJid ||
+    message.videoMessage?.contextInfo?.mentionedJid ||
+    [];
   const myJidFormat = `${myPhone}@s.whatsapp.net`;
-  
-  if (mentionedJids.includes(myJidFormat)) {
-    return true;
-  }
+  return mentionedJids.some((jid: string) => jid.startsWith(myPhone));
+}
 
-  // 2. Mención por texto plano (ej: @MundialBot, @panitamundial, @panita, @bot o mención de su número)
-  const plainTextLower = text.toLowerCase();
-  if (plainTextLower.includes('@mundialbot') || plainTextLower.includes('@panitamundial') || plainTextLower.includes('@panita') || plainTextLower.includes('@bot')) {
-    return true;
-  }
-
-  if (plainTextLower.includes(`@${myPhone}`)) {
-    return true;
-  }
-
-  return false;
+/**
+ * Verifica si hay alguna mención de texto (@algo) en el mensaje.
+ * Se usa como fallback en grupos registrados cuando no hay mención nativa.
+ */
+function checkIfTextMention(text: string, myPhone: string): boolean {
+  // Cualquier token que empiece con '@' cuenta como mención de texto
+  return /@\S+/.test(text);
 }
 
 /**
@@ -139,20 +141,14 @@ function checkIfMentioned(message: proto.IMessage, myPhone: string, text: string
  */
 function cleanMentions(text: string, myPhone: string): string {
   let clean = text;
-  
-  // Remover la mención del número @57300...
-  const numberRegex = new RegExp(`@${myPhone}\\b`, 'gi');
+
+  // Remover mención del número propio (@573001234567)
+  const numberRegex = new RegExp(`@${myPhone}\\S*`, 'gi');
   clean = clean.replace(numberRegex, '');
-  
-  // Remover otras menciones habituales
-  clean = clean.replace(/@mundialbot/gi, '');
-  clean = clean.replace(/@panitamundial/gi, '');
-  clean = clean.replace(/@panita/gi, '');
-  clean = clean.replace(/@bot/gi, '');
-  
-  // Limpiar cualquier otra mención general para evitar ruido
-  clean = clean.replace(/@\d+\b/g, '');
-  
+
+  // Remover cualquier otra mención @palabra (nombre de contacto, alias, etc.)
+  clean = clean.replace(/@\S+/g, '');
+
   return clean.trim();
 }
 
