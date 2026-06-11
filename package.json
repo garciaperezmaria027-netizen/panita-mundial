@@ -1,0 +1,40 @@
+{
+  "name": "mundialbot-2026",
+  "version": "1.0.0",
+  "description": "WhatsApp Bot for FIFA World Cup 2026 with Gemini AI and API-Football",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test-sports": "ts-node src/scratch/test-sports.ts",
+    "test-ai": "ts-node src/scratch/test-ai.ts"
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "baileys",
+    "gemini",
+    "worldcup",
+    "football",
+    "api-football"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@whiskeysockets/baileys": "^6.7.9",
+    "axios": "^1.6.8",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3",
+    "pino": "^9.0.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/node-cron": "^3.0.11",
+    "@types/qrcode-terminal": "^0.12.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.3"
+  }
+}

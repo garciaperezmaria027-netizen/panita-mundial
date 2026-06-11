@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  mundialbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mundialbot-whatsapp
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./auth_info_baileys:/app/auth_info_baileys
+      - ./cache:/app/cache
+      - ./logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

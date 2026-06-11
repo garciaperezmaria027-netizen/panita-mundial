@@ -1,0 +1,28 @@
+# Dependencias
+node_modules/
+
+# Compilación TypeScript
+dist/
+
+# Variables de entorno (¡NUNCA subir al repo!)
+.env
+
+# Sesión de WhatsApp (archivos de autenticación locales)
+# Fly.io los guarda en el volumen persistente, no en el repo
+auth_info_baileys/
+
+# Logs y caché local
+logs/
+cache/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Archivos temporales
+*.tmp
+*.log

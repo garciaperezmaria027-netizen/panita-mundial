@@ -1,0 +1,32 @@
+# fly.toml — Configuración de MundialBot 2026 en Fly.io
+# Generado automáticamente. Edita el nombre de la app si ya existe.
+
+app = "mundialbot-2026"
+primary_region = "mia"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+
+# Volumen persistente para guardar la sesión de WhatsApp (auth_info_baileys)
+# Esto evita tener que escanear el QR en cada reinicio.
+[[mounts]]
+  source = "mundialbot_data"
+  destination = "/app/auth_info_baileys"
+  initial_size = "1gb"
+
+[processes]
+  app = "node dist/index.js"
+
+# El bot no necesita exponer un puerto HTTP público,
+# pero Fly.io requiere al menos un servicio definido para health checks.
+[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+
+  [[services.tcp_checks]]
+    interval = "30s"
+    timeout = "10s"
+    grace_period = "60s"
