@@ -25,9 +25,15 @@ export async function handleIncomingMessage(sock: WASocket, m: proto.IWebMessage
     const text = extractMessageText(m.message);
     if (!text) return;
 
-    // Obtener nuestro propio JID
-    const myJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : '';
-    const myPhone = myJid.split('@')[0];
+    // Obtener nuestro propio JID — sock.user.id puede venir como "573xx:15@s.whatsapp.net"
+    const rawUserId = sock.user?.id ?? '';
+    // Extraer solo la parte numérica (quitar sufijo :XX si existe)
+    const myPhone = rawUserId.split('@')[0].split(':')[0];
+    const myJid = myPhone ? `${myPhone}@s.whatsapp.net` : '';
+
+    logger.debug(`[DEBUG] rawUserId=${rawUserId} myPhone=${myPhone} myJid=${myJid}`);
+    logger.debug(`[DEBUG] chatJid=${chatJid} senderJid=${senderJid}`);
+    logger.debug(`[DEBUG] texto recibido: "${text}"`);
 
     // 1. Verificar si es un comando administrativo (los comandos admin siempre empiezan con '/')
     if (text.startsWith('/')) {
@@ -50,6 +56,8 @@ export async function handleIncomingMessage(sock: WASocket, m: proto.IWebMessage
       const isNativeMention = checkIfNativeMention(m.message, myPhone);
       // Verificar si fue mencionado por texto (@panita, @bot, etc.)
       const isTextMention = checkIfTextMention(text, myPhone);
+
+      logger.debug(`[DEBUG] isGroup=true isRegisteredGroup=${isRegisteredGroup} isNativeMention=${isNativeMention} isTextMention=${isTextMention}`);
 
       // En grupos NO registrados: solo responder a menciones nativas de contacto
       // En grupos registrados: responder a cualquier tipo de mención
@@ -118,13 +126,19 @@ function extractMessageText(message: proto.IMessage): string {
  * Esto funciona sin importar cuál sea el nombre de contacto guardado.
  */
 function checkIfNativeMention(message: proto.IMessage, myPhone: string): boolean {
-  const mentionedJids =
+  const mentionedJids: string[] =
     message.extendedTextMessage?.contextInfo?.mentionedJid ||
     message.imageMessage?.contextInfo?.mentionedJid ||
     message.videoMessage?.contextInfo?.mentionedJid ||
     [];
-  const myJidFormat = `${myPhone}@s.whatsapp.net`;
-  return mentionedJids.some((jid: string) => jid.startsWith(myPhone));
+
+  // Log para depuración — ver en Railway logs
+  const { logger } = require('../utils/logger');
+  logger.debug(`[DEBUG] checkIfNativeMention myPhone=${myPhone} mentionedJids=${JSON.stringify(mentionedJids)}`);
+
+  if (mentionedJids.length === 0) return false;
+  // Comparar sin importar el sufijo :XX que puede traer Baileys
+  return mentionedJids.some((jid: string) => jid.split('@')[0].split(':')[0] === myPhone);
 }
 
 /**
