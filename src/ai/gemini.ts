@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI, Content } from '@google/generative-ai';
 import axios from 'axios';
 import { configManager } from '../config/manager';
-import { SYSTEM_PROMPT } from './system-prompt';
+import { getSystemPrompt } from './system-prompt';
 import { WORLD_CUP_TOOLS, executeTool } from '../tools/definitions';
 import { logger } from '../utils/logger';
 
@@ -161,7 +161,7 @@ class GeminiService {
 
     // Construir historial de mensajes para la API
     const messages: ChatMessage[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: getSystemPrompt() },
       ...history,
       { role: 'user', content: userMessage }
     ];
@@ -314,7 +314,7 @@ class GeminiService {
 
       const model = this.genAI.getGenerativeModel({
         model: modelName,
-        systemInstruction: SYSTEM_PROMPT,
+        systemInstruction: getSystemPrompt(),
         tools: WORLD_CUP_TOOLS as any,
       });
 

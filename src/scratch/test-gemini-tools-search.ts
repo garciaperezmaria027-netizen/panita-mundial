@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { WORLD_CUP_TOOLS, executeTool } from '../tools/definitions';
-import { SYSTEM_PROMPT } from '../ai/system-prompt';
+import { getSystemPrompt } from '../ai/system-prompt';
 import { logger } from '../utils/logger';
 
 dotenv.config();
@@ -24,7 +24,7 @@ async function testToolsAndSearch() {
 
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash-lite',
-    systemInstruction: SYSTEM_PROMPT,
+    systemInstruction: getSystemPrompt(),
     tools: selectedTools as any,
   });
 

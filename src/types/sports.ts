@@ -41,6 +41,12 @@ export interface MatchScore {
   penalty: MatchGoals;
 }
 
+export interface ScorerEntry {
+  name: string;
+  minute: number;
+  extra?: number;
+}
+
 export interface Match {
   fixture: Fixture;
   league: {
@@ -58,6 +64,11 @@ export interface Match {
   };
   goals: MatchGoals;
   score: MatchScore;
+  // Goleadores del partido (sólo disponible con el proveedor gratuito del Mundial 2026)
+  goalScorers?: {
+    home: ScorerEntry[];
+    away: ScorerEntry[];
+  };
 }
 
 export interface StandingTeam {

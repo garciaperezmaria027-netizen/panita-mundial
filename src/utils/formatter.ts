@@ -4,47 +4,68 @@ import { Match, GroupStanding, TopScorerRow, TopAssistRow, PlayerStatsSummary, S
  * Mapeo de códigos de país de FIFA / Nombres comunes a Emojis de Banderas
  */
 const COUNTRY_FLAGS: Record<string, string> = {
-  'Argentina': '🇦🇷',
-  'Brazil': '🇧🇷',
-  'Colombia': '🇨🇴',
-  'France': '🇫🇷',
-  'Germany': '🇩🇪',
-  'Spain': '🇪🇸',
-  'Italy': '🇮🇹',
-  'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-  'Netherlands': '🇳🇱',
-  'Portugal': '🇵🇹',
-  'Belgium': '🇧🇪',
-  'Croatia': '🇭🇷',
-  'Uruguay': '🇺🇾',
+  // Las 48 selecciones clasificadas al Mundial 2026
   'Mexico': '🇲🇽',
-  'USA': '🇺🇸',
-  'Canada': '🇨🇦',
-  'Japan': '🇯🇵',
+  'South Africa': '🇿🇦',
   'South Korea': '🇰🇷',
-  'Morocco': '🇲🇦',
-  'Senegal': '🇸🇳',
-  'Ecuador': '🇪🇨',
+  'Czech Republic': '🇨🇿',
+  'Canada': '🇨🇦',
+  'Bosnia and Herzegovina': '🇧🇦',
+  'Qatar': '🇶🇦',
   'Switzerland': '🇨🇭',
+  'Brazil': '🇧🇷',
+  'Morocco': '🇲🇦',
+  'Haiti': '🇭🇹',
+  'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  'United States': '🇺🇸',
+  'USA': '🇺🇸',
+  'Paraguay': '🇵🇾',
+  'Australia': '🇦🇺',
+  'Turkey': '🇹🇷',
+  'Germany': '🇩🇪',
+  'Curaçao': '🇨🇼',
+  'Ivory Coast': '🇨🇮',
+  'Ecuador': '🇪🇨',
+  'Netherlands': '🇳🇱',
+  'Japan': '🇯🇵',
+  'Sweden': '🇸🇪',
+  'Tunisia': '🇹🇳',
+  'Belgium': '🇧🇪',
+  'Egypt': '🇪🇬',
+  'Iran': '🇮🇷',
+  'New Zealand': '🇳🇿',
+  'Spain': '🇪🇸',
+  'Cape Verde': '🇨🇻',
+  'Saudi Arabia': '🇸🇦',
+  'Uruguay': '🇺🇾',
+  'France': '🇫🇷',
+  'Senegal': '🇸🇳',
+  'Iraq': '🇮🇶',
+  'Norway': '🇳🇴',
+  'Argentina': '🇦🇷',
+  'Algeria': '🇩🇿',
+  'Austria': '🇦🇹',
+  'Jordan': '🇯🇴',
+  'Portugal': '🇵🇹',
+  'Democratic Republic of the Congo': '🇨🇩',
+  'Uzbekistan': '🇺🇿',
+  'Colombia': '🇨🇴',
+  'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+  'Croatia': '🇭🇷',
+  'Ghana': '🇬🇭',
+  'Panama': '🇵🇦',
+  // Otras selecciones que los usuarios suelen mencionar aunque no estén en el Mundial 2026
+  'Italy': '🇮🇹',
   'Poland': '🇵🇱',
   'Cameroon': '🇨🇲',
-  'Tunisia': '🇹🇳',
-  'Ghana': '🇬🇭',
-  'Saudi Arabia': '🇸🇦',
   'Costa Rica': '🇨🇷',
   'Peru': '🇵🇪',
   'Chile': '🇨🇱',
-  'Paraguay': '🇵🇾',
   'Venezuela': '🇻🇪',
   'Bolivia': '🇧🇴',
-  'Australia': '🇦🇺',
   'Denmark': '🇩🇰',
   'Ukraine': '🇺🇦',
-  'Turkey': '🇹🇷',
-  'Sweden': '🇸🇪',
   'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
-  'Iran': '🇮🇷',
-  'Qatar': '🇶🇦',
   'Serbia': '🇷🇸'
 };
 
@@ -111,6 +132,31 @@ export function getColombiaBroadcasters(match: Match): { tv: string[]; streaming
 }
 
 /**
+ * Genera la línea de texto con los goleadores del partido (si hay datos disponibles)
+ */
+function formatScorersLine(m: Match): string {
+  if (!m.goalScorers) return '';
+
+  const formatSide = (scorers: { name: string; minute: number; extra?: number }[]) =>
+    scorers
+      .sort((a, b) => a.minute - b.minute)
+      .map(s => `${s.name} ${s.minute}'${s.extra ? `+${s.extra}` : ''}`)
+      .join(', ');
+
+  const homeStr = formatSide(m.goalScorers.home);
+  const awayStr = formatSide(m.goalScorers.away);
+
+  if (!homeStr && !awayStr) return '';
+
+  let line = `⚽ Goles: `;
+  const parts: string[] = [];
+  if (homeStr) parts.push(`${m.teams.home.name}: ${homeStr}`);
+  if (awayStr) parts.push(`${m.teams.away.name}: ${awayStr}`);
+  line += parts.join(' | ');
+  return line + '\n';
+}
+
+/**
  * Formatea el resumen diario de partidos
  */
 export function formatDailySummary(matches: Match[], dateStr?: string): string {
@@ -148,7 +194,7 @@ export function formatDailySummary(matches: Match[], dateStr?: string): string {
     const broadcasters = getColombiaBroadcasters(m);
     
     text += `${homeFlag} *${m.teams.home.name}* vs *${m.teams.away.name}* ${awayFlag}\n`;
-    
+
     if (m.fixture.status.short === 'NS') {
       text += `🕐 ${time}\n`;
     } else {
@@ -156,6 +202,7 @@ export function formatDailySummary(matches: Match[], dateStr?: string): string {
       const homeGoals = m.goals.home !== null ? m.goals.home : 0;
       const awayGoals = m.goals.away !== null ? m.goals.away : 0;
       text += `🏆 Marcador: *${homeGoals} - ${awayGoals}* (${m.fixture.status.long})\n`;
+      text += formatScorersLine(m);
     }
 
     text += `📺 TV: ${broadcasters.tv.join(' / ')}\n`;
@@ -195,6 +242,7 @@ export function formatMatchResults(matches: Match[], teamName?: string): string 
     if (m.score.penalty.home !== null) {
       text += `   (Penales: ${m.score.penalty.home} - ${m.score.penalty.away})\n`;
     }
+    text += formatScorersLine(m);
     text += `🏁 Estado: ${m.fixture.status.long}\n\n`;
   });
 
@@ -443,6 +491,20 @@ export function formatMatchDetails(data: { match: Match; events: any[]; lineups:
  */
 export function enrichMatchForAi(match: Match): any {
   const broadcasters = getColombiaBroadcasters(match);
+  const isFinished = ['FT', 'AET', 'PEN'].includes(match.fixture.status.short);
+
+  // Si tenemos goleadores (proveedor gratuito), exponerlos en formato legible para la IA
+  let goleadores: { home: string[]; away: string[] } | undefined;
+  if (match.goalScorers) {
+    const formatScorer = (s: { name: string; minute: number; extra?: number }) =>
+      `${s.name} ${s.minute}'${s.extra ? `+${s.extra}` : ''}`;
+
+    goleadores = {
+      home: match.goalScorers.home.map(formatScorer),
+      away: match.goalScorers.away.map(formatScorer)
+    };
+  }
+
   return {
     ...match,
     fixture: {
@@ -453,6 +515,9 @@ export function enrichMatchForAi(match: Match): any {
       streaming_colombia: broadcasters.streaming.join(' / '),
       // Eliminamos venue para evitar que el bot repita el estadio
       venue: undefined
-    }
+    },
+    // Sólo incluir goleadores si el partido ya finalizó y hay datos disponibles
+    goleadores: isFinished ? goleadores : undefined,
+    goalScorers: undefined
   };
 }

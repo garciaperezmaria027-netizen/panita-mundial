@@ -14,50 +14,84 @@ import {
   PlayerStatsSummary
 } from '../types/sports';
 
-// Mapeo común de nombres de equipos en español a inglés (como los reporta la API)
+// Mapeo de nombres de equipos en español (sin tildes, minúsculas) a su nombre en inglés
+// tal como lo reporta la API. Cubre las 48 selecciones clasificadas al Mundial 2026
+// más algunos alias comunes para evitar resultados vacíos por errores de traducción.
 const TEAM_TRANSLATIONS: Record<string, string> = {
-  'alemania': 'Germany',
-  'españa': 'Spain',
-  'inglaterra': 'England',
-  'francia': 'France',
-  'paises bajos': 'Netherlands',
-  'países bajos': 'Netherlands',
-  'holanda': 'Netherlands',
-  'estados unidos': 'USA',
-  'eeuu': 'USA',
-  'ee.uu.': 'USA',
-  'usa': 'USA',
-  'belgica': 'Belgium',
-  'bélgica': 'Belgium',
-  'croacia': 'Croatia',
-  'suiza': 'Switzerland',
-  'polonia': 'Poland',
-  'japon': 'Japan',
-  'japón': 'Japan',
-  'corea del sur': 'South Korea',
-  'camerun': 'Cameroon',
-  'camerún': 'Cameroon',
-  'marruecos': 'Morocco',
-  'tunez': 'Tunisia',
-  'túnez': 'Tunisia',
-  'senegal': 'Senegal',
-  'ghana': 'Ghana',
-  'arabia saudita': 'Saudi Arabia',
-  'arabia saudí': 'Saudi Arabia',
+  // Grupo A
   'mexico': 'Mexico',
-  'méxico': 'Mexico',
+  'sudafrica': 'South Africa',
+  'sud africa': 'South Africa',
+  'corea del sur': 'South Korea',
+  'corea': 'South Korea',
+  'republica checa': 'Czech Republic',
+  'chequia': 'Czech Republic',
+  // Grupo B
+  'canada': 'Canada',
+  'bosnia y herzegovina': 'Bosnia and Herzegovina',
+  'bosnia': 'Bosnia and Herzegovina',
+  'catar': 'Qatar',
+  'qatar': 'Qatar',
+  'suiza': 'Switzerland',
+  // Grupo C
   'brasil': 'Brazil',
-  'peru': 'Peru',
-  'perú': 'Peru',
-  'italia': 'Italy',
+  'escocia': 'Scotland',
+  'marruecos': 'Morocco',
+  'haiti': 'Haiti',
+  // Grupo D
   'turquia': 'Turkey',
-  'turquía': 'Turkey',
-  'suecia': 'Sweden',
-  'argelia': 'Algeria',
+  'estados unidos': 'United States',
+  'eeuu': 'United States',
+  'ee.uu.': 'United States',
+  'usa': 'United States',
+  'paraguay': 'Paraguay',
+  'australia': 'Australia',
+  // Grupo E
   'costa de marfil': 'Ivory Coast',
-  'irlanda': 'Ireland',
-  'ucrania': 'Ukraine',
-  'rumania': 'Romania'
+  'ecuador': 'Ecuador',
+  'curazao': 'Curaçao',
+  'alemania': 'Germany',
+  // Grupo F
+  'paises bajos': 'Netherlands',
+  'holanda': 'Netherlands',
+  'japon': 'Japan',
+  'tunez': 'Tunisia',
+  'suecia': 'Sweden',
+  // Grupo G
+  'egipto': 'Egypt',
+  'nueva zelanda': 'New Zealand',
+  'nueva zelandia': 'New Zealand',
+  'belgica': 'Belgium',
+  'iran': 'Iran',
+  // Grupo H
+  'cabo verde': 'Cape Verde',
+  'arabia saudita': 'Saudi Arabia',
+  'arabia saudi': 'Saudi Arabia',
+  'espana': 'Spain',
+  'uruguay': 'Uruguay',
+  // Grupo I
+  'francia': 'France',
+  'irak': 'Iraq',
+  'iraq': 'Iraq',
+  'noruega': 'Norway',
+  'senegal': 'Senegal',
+  // Grupo J
+  'austria': 'Austria',
+  'argentina': 'Argentina',
+  'argelia': 'Algeria',
+  'jordania': 'Jordan',
+  // Grupo K
+  'portugal': 'Portugal',
+  'uzbekistan': 'Uzbekistan',
+  'colombia': 'Colombia',
+  'republica democratica del congo': 'Democratic Republic of the Congo',
+  'rd congo': 'Democratic Republic of the Congo',
+  'congo': 'Democratic Republic of the Congo',
+  // Grupo L
+  'ghana': 'Ghana',
+  'inglaterra': 'England',
+  'panama': 'Panama',
+  'croacia': 'Croatia'
 };
 
 class SportsService {
@@ -73,10 +107,17 @@ class SportsService {
   }
 
   /**
+   * Quita tildes/diacríticos y normaliza a minúsculas (ej. "México" -> "mexico")
+   */
+  private stripAccents(name: string): string {
+    return name.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  }
+
+  /**
    * Resuelve el nombre del equipo ingresado por el usuario a su versión estándar o inglés
    */
   private normalizeTeamName(name: string): string {
-    const cleaned = name.trim().toLowerCase();
+    const cleaned = this.stripAccents(name);
     return TEAM_TRANSLATIONS[cleaned] || name;
   }
 
@@ -84,9 +125,9 @@ class SportsService {
    * Busca si un nombre parcial coincide con el nombre del equipo de la API
    */
   private matchTeam(userInput: string, teamName: string): boolean {
-    const normUser = this.normalizeTeamName(userInput).toLowerCase();
-    const normTeam = teamName.toLowerCase();
-    
+    const normUser = this.stripAccents(this.normalizeTeamName(userInput));
+    const normTeam = this.stripAccents(teamName);
+
     // Comparación directa o inclusión
     return normTeam.includes(normUser) || normUser.includes(normTeam);
   }
