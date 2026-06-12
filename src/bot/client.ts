@@ -158,17 +158,13 @@ export class WhatsAppClient {
             this.clearAuthSession();
           }
 
-          const isImmediate = statusCode === DisconnectReason.restartRequired || 
-                              statusCode === DisconnectReason.connectionClosed ||
-                              statusCode === 515 || statusCode === 428;
+          const isRestart = statusCode === DisconnectReason.restartRequired || 
+                            statusCode === DisconnectReason.connectionClosed ||
+                            statusCode === 515 || statusCode === 428;
 
-          if (isImmediate) {
-            logger.info('🔄 [WhatsApp] Reinicio o cierre normal de conexión detectado. Reconectando de inmediato...');
-            this.isReconnecting = false;
-            this.connect();
-          } else if (shouldReconnect) {
-            const delayTime = 5000;
-            logger.info(`🔄 [WhatsApp] Reconectando en ${delayTime / 1000} segundos...`);
+          if (shouldReconnect) {
+            const delayTime = isRestart ? 3000 : 5000;
+            logger.info(`🔄 [WhatsApp] Reconectando en ${delayTime / 1000} segundos... Razón: ${isRestart ? 'Reinicio/Cierre normal' : 'Desconexión recuperable'}`);
             this.isReconnecting = true;
             setTimeout(() => {
               this.isReconnecting = false;
