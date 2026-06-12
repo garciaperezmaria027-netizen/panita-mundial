@@ -12,6 +12,7 @@ export async function handleIncomingMessage(sock: WASocket, m: proto.IWebMessage
     // Evitar procesar mensajes propios o del sistema
     if (!m.message) return;
     const key = m.key;
+    if (!key) return;
     if (key.fromMe) return;
 
     const chatJid = key.remoteJid;
@@ -171,7 +172,7 @@ function cleanMentions(text: string, myPhone: string, myLid: string): string {
  */
 async function sendMessage(sock: WASocket, jid: string, text: string, originalMessage: proto.IWebMessageInfo) {
   try {
-    await sock.sendMessage(jid, { text }, { quoted: originalMessage });
+    await sock.sendMessage(jid, { text }, { quoted: originalMessage as any });
   } catch (error) {
     logger.error(`Error al enviar respuesta a ${jid}:`, error);
   }
