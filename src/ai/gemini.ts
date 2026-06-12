@@ -94,27 +94,16 @@ class GeminiService {
   }
 
   /**
-   * Procesa un mensaje de usuario decidiendo si usar OpenRouter o Gemini directo
+   * Procesa un mensaje de usuario utilizando Gemini o OpenRouter
    */
   public async getResponse(jid: string, userMessage: string): Promise<string> {
     const openRouterApiKey = configManager.getOpenRouterApiKey();
     const geminiApiKey = configManager.getGeminiApiKey();
-    
-    // Clasificar la consulta para decidir qué herramientas usar
-    const cleanMsg = userMessage.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const footballKeywords = [
-      'partido', 'resultado', 'juego', 'juega', 'jugar', 'jugador', 'vs', 'contra', 
-      'clasificacion', 'posiciones', 'standing', 'tabla', 'grupo', 'goleador', 
-      'asistidor', 'asistencia', 'alineacion', 'nomina', 'titular', 'suplente', 
-      'dt', 'entrenador', 'estadistica', 'minuto', 'gol', 'tarjeta', 'roja', 
-      'amarilla', 'fixture', 'fecha', 'mundial', 'copa del mundo', 'fifa', 'futbol', 'soccer'
-    ];
-    const isFootballQuery = footballKeywords.some(keyword => cleanMsg.includes(keyword));
 
     if (geminiApiKey) {
       try {
         logger.info(`[AI Service] Procesando mensaje con Gemini SDK Directo para ${jid}`);
-        return await this.getGeminiResponseDirect(jid, userMessage, isFootballQuery);
+        return await this.getGeminiResponseDirect(jid, userMessage);
       } catch (error: any) {
         logger.error('[AI Service] Error crítico en el SDK directo de Gemini:', error);
         
@@ -122,7 +111,7 @@ class GeminiService {
         if (openRouterApiKey) {
           logger.info('[AI Service] Iniciando fallback a OpenRouter...');
           try {
-            return await this.getOpenRouterResponse(jid, userMessage, isFootballQuery);
+            return await this.getOpenRouterResponse(jid, userMessage);
           } catch (orError: any) {
             logger.error('[AI Service] Error crítico también en el fallback de OpenRouter:', orError);
           }
@@ -141,7 +130,7 @@ class GeminiService {
     } else if (openRouterApiKey) {
       try {
         logger.info(`[AI Service] Gemini API Key no encontrada de forma directa. Procesando mensaje con OpenRouter para ${jid}`);
-        return await this.getOpenRouterResponse(jid, userMessage, isFootballQuery);
+        return await this.getOpenRouterResponse(jid, userMessage);
       } catch (error: any) {
         logger.error('[AI Service] Error crítico en el flujo de OpenRouter:', error);
         return '🤖 *Panita Mundial:* ¡Qué pena contigo, panita! Me dio un calambre cerebral procesando tu pregunta. ¿Me la repites, a lo bien? ⚽';
@@ -154,7 +143,7 @@ class GeminiService {
   /**
    * Flujo de llamada a OpenRouter con fallback automático de modelos
    */
-  private async getOpenRouterResponse(jid: string, userMessage: string, isFootballQuery: boolean): Promise<string> {
+  private async getOpenRouterResponse(jid: string, userMessage: string): Promise<string> {
     const apiKey = configManager.getOpenRouterApiKey();
     const models = configManager.getOpenRouterModels();
 
@@ -167,8 +156,8 @@ class GeminiService {
     }
     const history = this.openRouterHistories.get(jid)!;
 
-    // Convertir herramientas a formato compatible con OpenAI si es consulta futbolera
-    const tools = isFootballQuery ? this.convertGeminiToolsToOpenAi(WORLD_CUP_TOOLS) : undefined;
+    // Convertir herramientas a formato compatible con OpenAI
+    const tools = this.convertGeminiToolsToOpenAi(WORLD_CUP_TOOLS);
 
     // Construir historial de mensajes para la API
     const messages: ChatMessage[] = [
@@ -311,7 +300,7 @@ class GeminiService {
   /**
    * Envía mensaje directo utilizando el SDK de Gemini
    */
-  private async getGeminiResponseDirect(jid: string, userMessage: string, isFootballQuery: boolean): Promise<string> {
+  private async getGeminiResponseDirect(jid: string, userMessage: string): Promise<string> {
     if (!this.genAI) {
       this.init();
       if (!this.genAI) {
@@ -320,17 +309,13 @@ class GeminiService {
     }
 
     try {
-      const selectedTools = isFootballQuery 
-        ? WORLD_CUP_TOOLS 
-        : [{ googleSearch: {} }];
-
       const modelName = configManager.getGeminiModel();
-      logger.info(`[Gemini SDK] Seleccionando herramientas para consulta futbolera: ${isFootballQuery} | Modelo: ${modelName}`);
+      logger.info(`[Gemini SDK] Seleccionando herramientas para consulta Mundial: Modelo: ${modelName}`);
 
       const model = this.genAI.getGenerativeModel({
         model: modelName,
         systemInstruction: SYSTEM_PROMPT,
-        tools: selectedTools as any,
+        tools: WORLD_CUP_TOOLS as any,
       });
 
       const history = this.getCleanHistory(jid);
