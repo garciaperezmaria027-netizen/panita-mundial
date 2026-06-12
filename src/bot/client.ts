@@ -2,7 +2,8 @@ import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
-  WASocket
+  WASocket,
+  Browsers
 } from '@whiskeysockets/baileys';
 import * as qrcode from 'qrcode-terminal';
 import * as fs from 'fs';
@@ -72,7 +73,8 @@ export class WhatsAppClient {
         auth: state,
         printQRInTerminal: !usePairing, // Solo imprime QR si no usamos pairing code
         defaultQueryTimeoutMs: 60000,
-        keepAliveIntervalMs: 30000
+        keepAliveIntervalMs: 30000,
+        browser: Browsers.macOS('Chrome')
       });
 
       // Guardar credenciales automáticamente ante cambios
