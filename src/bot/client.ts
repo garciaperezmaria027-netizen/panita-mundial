@@ -59,7 +59,18 @@ export class WhatsAppClient {
     logger.info('🟢 [WhatsApp] Iniciando conexión con WhatsApp...');
 
     try {
-      const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+      let { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+
+      // Si la sesión local no está registrada (es nueva o falló la anterior), limpiamos para evitar corrupción
+      if (!state.creds.registered) {
+        logger.info('🧹 [WhatsApp] Sesión no registrada. Limpiando archivos locales para evitar conflictos de vinculación...');
+        this.clearAuthSession();
+        // Recargar el estado de autenticación totalmente limpio
+        const freshAuth = await useMultiFileAuthState(AUTH_DIR);
+        state = freshAuth.state;
+        saveCreds = freshAuth.saveCreds;
+      }
+
       const { version, isLatest } = await fetchLatestBaileysVersion();
       logger.info(`📋 [WhatsApp] Usando versión de Baileys: v${version.join('.')}, última disponible: ${isLatest}`);
 
